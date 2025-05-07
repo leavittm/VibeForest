@@ -40,6 +40,16 @@ const topoLayer = L.tileLayer('./topowebp/{z}/{x}/{y}.webp', {
     thumbnail: './public/TopoThumb.png'
 });
 
+// Add canopy layer
+const canopyLayer = L.tileLayer('./canopywebp/{z}/{x}/{y}.webp', {
+    tms: true,
+    minZoom: 15,
+    maxNativeZoom: 17,
+    maxZoom: 23,
+    attribution: 'Canopy Map',
+    thumbnail: './public/CanopyThumb.png'
+});
+
 // Property boundary layer - create empty layer first
 const boundaryLayer = L.geoJSON(null, {
     style: {
@@ -162,8 +172,9 @@ const baseMaps = {
 };
 
 const overlayMaps = {
-    "Orthographic Imagery": orthoLayer,
-    "Topographic Map": topoLayer
+    "Canopy Map": canopyLayer,
+    "Topographic Map": topoLayer,
+    "Orthographic Imagery": orthoLayer
 };
 
 // Add OSM as default base layer
@@ -420,9 +431,14 @@ function createLayerItem(name, layer) {
     return item;
 }
 
-// Populate overlay layers in reverse order to get topo on top
-for (const [name, layer] of Object.entries(overlayMaps).reverse()) {
+// Populate overlay layers in the defined order
+for (const [name, layer] of Object.entries(overlayMaps)) {
     const item = createLayerItem(name, layer);
+    // Set initial state for canopy layer
+    if (name === "Canopy Map") {
+        const toggleSwitch = item.querySelector('.toggle-switch');
+        toggleSwitch.classList.remove('active');
+    }
     overlayLayerList.appendChild(item);
 }
 
