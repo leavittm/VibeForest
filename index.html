@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VibeForest Map Viewer</title>
+
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <!-- Sortable.js for drag and drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .title-control {
+            padding: 6px 10px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .title-text {
+            font-size: 16pt;
+            font-weight: bold;
+        }
+        .legend {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            line-height: 1.5;
+        }
+        .info {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        
+        /* Sidebar Styles */
+        #sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            border-radius: 0 5px 5px 0;
+        }
+        
+        #sidebar.expanded {
+            transform: translateX(0);
+        }
+        
+        #sidebar-toggle {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 44px;
+            height: 44px;
+            background: #2b8cbe;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 1001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: white;
+        }
+        
+        .sidebar-header {
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .layer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .layer-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            cursor: grab;
+            background: white;
+        }
+        
+        .layer-item:active {
+            cursor: grabbing;
+        }
+        
+        .layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .layer-name {
+            font-weight: 500;
+        }
+        
+        .layer-visible {
+            cursor: pointer;
+        }
+        
+        .layer-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .opacity-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .opacity-slider {
+            flex-grow: 1;
+        }
+        
+        .opacity-value {
+            width: 40px;
+            text-align: right;
+        }
+        
+        .sort-handle {
+            color: #ccc;
+            margin-right: 8px;
+            cursor: grab;
+        }
+        
+        .base-layers, .overlay-layers {
+            margin-bottom: 10px;
+        }
+        
+        .section-title {
+            padding: 10px 15px;
+            background: #f5f5f5;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 600px) {
+            #sidebar {
+                width: 100%;
+                height: 33%;
+                top: auto;
+                bottom: 0;
+                transform: translateY(100%);
+                border-radius: 5px 5px 0 0;
+            }
+            
+            #sidebar.expanded {
+                transform: translateY(0);
+            }
+            
+            .opacity-control {
+                flex-wrap: wrap;
+            }
+            
+            #sidebar-toggle {
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+        
+        /* Sortable ghost class */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #f0f0f0;
+        }
+        
+        /* Improve Range Input Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #2b8cbe;
+            cursor: pointer;
+        }
+        
+        input[type=range]::-moz-range-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #2b8cbe;
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* Debug Info Position */
+        .debug-right {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 900;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Sidebar Toggle Button -->
+<div id="sidebar-toggle">
+    <i class="fa fa-bars"></i>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+    <div class="sidebar-header">
+        <span>Layer Controls</span>
+        <i class="fa fa-times" id="sidebar-close"></i>
+    </div>
+    
+    <div class="base-layers">
+        <div class="section-title">Base Maps</div>
+        <div class="base-buttons">
+            <button id="osm-button" class="base-button active">OpenStreetMap</button>
+            <button id="carto-button" class="base-button">Google Maps</button>
+        </div>
+    </div>
+    
+    <div class="overlay-layers">
+        <div class="section-title">Layers</div>
+        <ul class="layer-list" id="overlay-layer-list">
+            <!-- Overlay layers will be added here by JavaScript -->
+        </ul>
+    </div>
+</div>
+
+<script src="main.js"></script>
+
+</body>
+</html> 
