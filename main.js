@@ -28,7 +28,11 @@ const orthoLayer = L.tileLayer('./orthowebp/{z}/{x}/{y}.webp', {
     maxNativeZoom: 19,
     maxZoom: 23,
     attribution: 'Ortho Imagery',
-    thumbnail: './public/OrthoThumb.png'
+    thumbnail: './public/OrthoThumb.png',
+    bounds: L.latLngBounds(
+        L.latLng(39.64, -76.18),
+        L.latLng(39.66, -76.16)
+    )
 });
 
 const topoLayer = L.tileLayer('./topowebp/{z}/{x}/{y}.webp', {
@@ -37,7 +41,11 @@ const topoLayer = L.tileLayer('./topowebp/{z}/{x}/{y}.webp', {
     maxNativeZoom: 18,
     maxZoom: 23,
     attribution: 'Topo Map',
-    thumbnail: './public/TopoThumb.png'
+    thumbnail: './public/TopoThumb.png',
+    bounds: L.latLngBounds(
+        L.latLng(39.64, -76.18),
+        L.latLng(39.66, -76.16)
+    )
 });
 
 // Add canopy layer
@@ -47,7 +55,11 @@ const canopyLayer = L.tileLayer('./canopywebp/{z}/{x}/{y}.webp', {
     maxNativeZoom: 17,
     maxZoom: 23,
     attribution: 'Canopy Map',
-    thumbnail: './public/CanopyThumb.png'
+    thumbnail: './public/CanopyThumb.png',
+    bounds: L.latLngBounds(
+        L.latLng(39.64, -76.18),
+        L.latLng(39.66, -76.16)
+    )
 });
 
 // Property boundary layer - create empty layer first
@@ -193,36 +205,6 @@ titleControl.onAdd = function() {
 };
 titleControl.addTo(map);
 
-// Add debug info for tile loading
-const debugInfo = L.control({position: 'bottomright'});
-debugInfo.onAdd = function() {
-    const div = L.DomUtil.create('div', 'legend');
-    div.style.display = 'none'; // Hide the debug info box
-    div.innerHTML = '<h4>Debug Info</h4>' +
-                    '<div id="zoom-level">Current Zoom: ' + map.getZoom() + '</div>' +
-                    '<div id="tile-count">Ortho Tiles: 0</div>';
-    return div;
-};
-debugInfo.addTo(map);
-
-// Update debug info on zoom
-map.on('zoomend', function() {
-    const zoomLevel = document.getElementById('zoom-level');
-    if (zoomLevel) {
-        zoomLevel.innerHTML = 'Current Zoom: ' + map.getZoom();
-    }
-});
-
-// Track tile loading
-let tileCount = 0;
-orthoLayer.on('tileload', function() {
-    tileCount++;
-    const tileCountElement = document.getElementById('tile-count');
-    if (tileCountElement) {
-        tileCountElement.innerHTML = 'Ortho Tiles: ' + tileCount;
-    }
-});
-
 // Sidebar functionality
 const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -315,20 +297,21 @@ sidebarClose.addEventListener('click', () => {
 // Function to dynamically adjust sidebar height based on content
 function adjustSidebarContentHeight() {
     if (window.innerWidth <= 600) {
-        // On mobile, measure content and adjust height if necessary
-        const contentHeight = sidebar.scrollHeight;
-        const maxHeight = window.innerHeight * 0.6; // 60% of viewport height
+        // On mobile, use viewport height units for better iOS compatibility
+        const maxHeight = window.innerHeight * 0.8; // 80% of viewport height
+        sidebar.style.height = 'auto';
+        sidebar.style.maxHeight = `${maxHeight}px`;
+        sidebar.style.overflowY = 'auto';
         
-        if (contentHeight < maxHeight) {
-            sidebar.style.height = contentHeight + 'px';
-        } else {
-            sidebar.style.height = '';
-            sidebar.style.maxHeight = maxHeight + 'px';
-        }
+        // Force iOS to recalculate height
+        sidebar.style.display = 'none';
+        sidebar.offsetHeight; // Force reflow
+        sidebar.style.display = 'block';
     } else {
         // On desktop, ensure the sidebar shows all content
         sidebar.style.height = 'auto';
         sidebar.style.maxHeight = 'none';
+        sidebar.style.overflowY = 'visible';
     }
 }
 
